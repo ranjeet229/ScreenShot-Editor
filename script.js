@@ -76,22 +76,93 @@ class ScreenshotEditor {
   }
 
   setupKeyboardShortcuts() {
-    document.addEventListener('keydown', (e)=>{
-      if(e.ctrlKey || e.metaKey){
-        if(e.key === 'z'){
+    document.addEventListener("keydown", (e) => {
+      if (e.ctrlKey || e.metaKey) {
+        if (e.key === "z") {
           e.preventDefault();
           this.undo();
-        }else if(e.key ==='y' || (e.shiftKey&& e.key ==='z')){
+        } else if (e.key === "y" || (e.shiftKey && e.key === "z")) {
           e.preventDefault();
           this.redo();
         }
       }
 
-      const toolMap = { b: 'blur', p: 'pixelate', r: 'rectangle', a: 'arrow', t: 'text' };
-      if(toolMap[e.key.toLowerCase()] && !e.ctrlKey && !e.metaKey){
+      const toolMap = {
+        b: "blur",
+        p: "pixelate",
+        r: "rectangle",
+        a: "arrow",
+        t: "text",
+      };
+      if (toolMap[e.key.toLowerCase()] && !e.ctrlKey && !e.metaKey) {
         this.selectTool(toolMap[e.key.toLowerCase()]);
       }
     });
   }
-  
+  selectTool(tool) {
+    this.currentTool = tool;
+    document
+      .querySelectorAll("[data-tool]")
+      .forEach((btn) => btn.classList.remove("active"));
+    document.querySelector(`[data-tool="${tool}"]`).classList.add("active");
+  }
+  handlePaste(e) {
+    e.preventDefault();
+    const items = e.clipboardData.items;
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const blob = items[i].getAsFile();
+        this.loadImageFromBlob(blob);
+        return;
+      }
+    }
+  }
+  handleDragOver(e) {
+    e.preventDefault();
+    this.dropZone.classList.add("drag-over");
+  }
+  handleDragLeave(e) {
+    e.preventDefault();
+    this.dropZone.classList.remove("drag-over");
+  }
+  handleDrop(e) {
+    e.preventDefault();
+    this.dropZone.classList.remove("drag-over");
+
+    const files = e.dataTransfer.files;
+    if (files.length > 0 && files[0].type.startsWith("image/")) {
+      this.loadImageFromBlob(files[0]);
+    }
+  }
+  loadImageFromBlob(blob) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        this.originalImage = img;
+        this.setupCanvas(img);
+        this.saveState();
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(blob);
+  }
+
+  setupCanvas(img){
+    this.canvas.width = img.width;
+    this.canvas.height = img.height;
+    this.tempCanvas.width = img.width;
+    this.tempCanvas.height = img.height;
+
+    this.ctx.drawImage(img, 0, 0);
+
+    this.dropZone.classList.add('hidden');
+    this.canvas.classList.remove('hidden');
+    this.canvas.classList.remove('hidden');
+  }
+
+  getMousePos(e){
+    
+  }
 }
