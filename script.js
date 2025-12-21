@@ -149,7 +149,7 @@ class ScreenshotEditor {
     reader.readAsDataURL(blob);
   }
 
-  setupCanvas(img){
+  setupCanvas(img) {
     this.canvas.width = img.width;
     this.canvas.height = img.height;
     this.tempCanvas.width = img.width;
@@ -157,12 +157,80 @@ class ScreenshotEditor {
 
     this.ctx.drawImage(img, 0, 0);
 
-    this.dropZone.classList.add('hidden');
-    this.canvas.classList.remove('hidden');
-    this.canvas.classList.remove('hidden');
+    this.dropZone.classList.add("hidden");
+    this.canvas.classList.remove("hidden");
+    this.canvas.classList.remove("hidden");
   }
 
-  getMousePos(e){
-    
+  getMousePos(e) {
+    const rect = this.canvas.getBoundingClientRect();
+    const scaleX = this.canvas.width / rect.width;
+    const scaleY = this.canvas.height / rect.height;
+
+    return {
+      x: (e.clientX - rect.left) * scaleX,
+      y: (e.clientY - rect.top) * scaleY,
+    };
   }
+
+  startDrawing(e) {
+    this.isDrawing = true;
+    const pos = this.getMousePos(e);
+    this.startX = pos.x;
+    this.startY = pos.y;
+    this.currentX = pos.x;
+    this.currentY = pos.y;
+
+    this.tempCtx.clearRect(0, 0, this.tempCanvas.width, this.tempCanvas.height);
+    this.tempCtx.drawImage(this.canvas, 0, 0);
+
+    if (this.currentTool === 'blur' || this.currentTool === 'pixelate') {
+      this.applyBrushEffect(pos.x, pos.y);
+    } else if (this.currentTool === 'text') {
+      this.addText(pos.x, pos.y);
+    }
+  }
+
+  draw(e){
+    if(!this.isDrawing ) return ;
+
+    const pos = this.getMousePos(e);
+    this.currentX =  pos.x;
+    this.currentY = pos.y;
+
+    if(this.currentTool === 'blur' || this.currentTool === 'pixelate'){
+      this.applyBrushEffect(pos.x, pos.y);
+    }else if(this.currentTool === 'rectangle' || this.currentTool === 'arrow'){
+      this.drawPreview();
+    }
+  }
+
+  stopDrawing(){
+    if(!this.isDrawing) return ;
+    this.isDrawing = false;
+
+    if(this.currentTool === 'rectangle'){
+      this.drawRectangle();
+    }else if(this.currentTool === 'arrow'){
+      this.drawArrow();
+    }
+    this.saveState();
+  }
+  applyBrushEffect(x, y){
+    const radius = this.brushSize /2;
+    const imageData = this.tempCtx.getImageData(
+      Math.max(0, x - radius),
+      Math.max(0, y - radius),
+      Math.min(this.canvas.width, radius*2),
+      Math.min(this.canvas.height, radius*2)
+    );
+
+    if(this.currentTool ==='blur'){
+      this.applyBlur(imageData);
+    }else if(this.currentTool === 'pixelate'){
+      this.applyPixelate(imageData);
+    }
+    this.ctx.putImageData(imageData, Math.max(0, x - radius), Math.max(0, y - radius));
+  }
+  
 }
